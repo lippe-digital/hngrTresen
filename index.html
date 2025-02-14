@@ -7,44 +7,21 @@
     <script>
         var ws;
         var unlocked = false;
-
+        
         function connectWebSocket() {
             ws = new WebSocket('ws://' + window.location.hostname + ':81/');
-            ws.onmessage = function(event) {
-                var msg = event.data;
-                console.log("Received:", msg);
-            };
+            ws.onmessage = function(event) { console.log("Received:", event.data); };
         }
 
         function validatePin() {
             var pin = prompt("Enter 4-digit PIN:");
-            fetch('/validate-pin?pin=' + pin)
-                .then(response => response.text())
-                .then(result => {
-                    if (result === "OK") {
-                        document.getElementById("controls").style.display = "block";
-                        unlocked = true;
-                    } else {
-                        alert("Incorrect PIN!");
-                    }
-                });
+            fetch('/validate-pin?pin=' + pin).then(response => response.text()).then(result => {
+                if (result === "OK") { document.getElementById("controls").style.display = "block"; unlocked = true; }
+                else alert("Incorrect PIN!");
+            });
         }
 
-        function sendCommand(cmd) {
-            if (unlocked) ws.send(cmd);
-        }
-
-        function setBrightness(value) {
-            sendCommand("brightness:" + value);
-        }
-
-        function setMode(value) {
-            sendCommand("mode:" + value);
-        }
-
-        function setColor(value) {
-            sendCommand("color:" + value.replace("#", ""));
-        }
+        function sendCommand(cmd) { if (unlocked) ws.send(cmd); }
     </script>
 </head>
 <body onload="connectWebSocket(); validatePin();">
@@ -52,12 +29,12 @@
     <div id="controls" style="display:none;">
         <button onclick="sendCommand('toggle_power')">Power</button>
         <button onclick="sendCommand('toggle_white')">Warm White</button>
-        <input type="range" min="0" max="255" onchange="setBrightness(this.value)">
-        <select onchange="setMode(this.value)">
+        <input type="range" min="0" max="255" onchange="sendCommand('brightness:' + this.value)">
+        <select onchange="sendCommand('mode:' + this.value)">
             <option value="solid">Solid</option>
             <option value="rainbow">Rainbow</option>
         </select>
-        <input type="color" onchange="setColor(this.value)">
+        <input type="color" onchange="sendCommand('color:' + this.value.replace('#', ''))">
     </div>
 </body>
 </html>
