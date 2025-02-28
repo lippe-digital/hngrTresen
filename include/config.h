@@ -6,8 +6,8 @@
 #define DATA_PIN 2
 
 // WiFi Configuration
-#define WIFI_SSID "fipsNetz"
-#define WIFI_PASSWORD "noboddyknowsthecode"
+#define WIFI_SSID "YOUR_SSID"
+#define WIFI_PASSWORD "YOUR_PASSWORD"
 
 // LED Control
 #define DEFAULT_BRIGHTNESS 127
