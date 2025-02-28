@@ -1,10 +1,6 @@
 #include <zephyr.h>
-#include <logging/log.h>
 #include <drivers/led_strip.h>
-#include <net/wifi_mgmt.h>
-#include <net/socket.h>
-#include <fs/fs.h>
-#include <data/json.h>
+#include <logging/log.h>
 #include "config.h"
 
 LOG_MODULE_REGISTER(main);
@@ -16,69 +12,17 @@ static bool power_on = true;
 static char current_mode[16] = "solid"; // solid, rainbow, pulse
 static uint32_t current_color = DEFAULT_COLOR;
 
-// Filesystem
-static struct fs_mount_t littlefs_mnt = {
-    .type = FS_LITTLEFS,
-    .mnt_point = "/lfs",
-    .storage_dev = (void *)FLASH_AREA_ID(storage),
-};
-
-// WebSocket
-static int web_socket_fd;
-static struct sockaddr_in server_addr;
-
-// Persistent Settings
-void save_settings(void) {
-    struct fs_file_t file;
-    fs_file_t_init(&file);
-
-    char buffer[128];
-    snprintf(buffer, sizeof(buffer),
-             "{\"power\":%s,\"brightness\":%d,\"mode\":\"%s\",\"color\":%lu}",
-             power_on ? "true" : "false", brightness, current_mode, current_color);
-
-    int ret = fs_open(&file, "/lfs/config.json", FS_O_CREATE | FS_O_WRITE);
-    if (ret < 0) {
-        LOG_ERR("Failed to open file for writing: %d", ret);
+// Initialize LED Strip
+void init_led_strip(void) {
+    led_strip = DEVICE_DT_GET(DT_ALIAS(led_strip));
+    if (!device_is_ready(led_strip)) {
+        LOG_ERR("LED strip device not ready");
         return;
     }
-
-    ret = fs_write(&file, buffer, strlen(buffer));
-    if (ret < 0) {
-        LOG_ERR("Failed to write to file: %d", ret);
-    }
-
-    fs_close(&file);
+    LOG_INF("LED strip initialized");
 }
 
-void load_settings(void) {
-    struct fs_file_t file;
-    fs_file_t_init(&file);
-
-    int ret = fs_open(&file, "/lfs/config.json", FS_O_READ);
-    if (ret < 0) {
-        LOG_ERR("Failed to open file for reading: %d", ret);
-        return;
-    }
-
-    char buffer[128];
-    ret = fs_read(&file, buffer, sizeof(buffer));
-    if (ret < 0) {
-        LOG_ERR("Failed to read from file: %d", ret);
-        fs_close(&file);
-        return;
-    }
-
-    fs_close(&file);
-
-    json_obj_parse(buffer, strlen(buffer), json_descr, ARRAY_SIZE(json_descr), &settings);
-    power_on = settings.power;
-    brightness = settings.brightness;
-    strncpy(current_mode, settings.mode, sizeof(current_mode) - 1);
-    current_color = settings.color;
-}
-
-// LED Control Logic
+// Apply LED Settings
 void apply_led_settings(void) {
     struct led_rgb pixels[NUM_LEDS];
 
@@ -121,47 +65,10 @@ void apply_led_settings(void) {
 void main(void) {
     LOG_INF("Starting LED Control Application");
 
-    // Initialize LittleFS
-    if (fs_mount(&littlefs_mnt) != 0) {
-        LOG_ERR("Failed to mount LittleFS");
-        return;
-    }
-    LOG_INF("LittleFS mounted successfully");
-
-    // Load settings
-    load_settings();
-
     // Initialize LED Strip
-    led_strip = device_get_binding(DT_LABEL(DT_INST(0, worldsemi_ws2812)));
-    if (!led_strip) {
-        LOG_ERR("LED strip device not found");
-        return;
-    }
+    init_led_strip();
 
-    // Connect to WiFi
-    struct net_if *iface = net_if_get_default();
-    if (!iface) {
-        LOG_ERR("No network interface found");
-        return;
-    }
-
-    struct wifi_connect_req_params params = {
-        .ssid = WIFI_SSID,
-        .ssid_length = strlen(WIFI_SSID),
-        .psk = WIFI_PASSWORD,
-        .psk_length = strlen(WIFI_PASSWORD),
-        .channel = WIFI_CHANNEL_ANY,
-        .security = WIFI_SECURITY_TYPE_PSK,
-    };
-
-    if (net_mgmt(NET_REQUEST_WIFI_CONNECT, iface, &params, sizeof(params))) {
-        LOG_ERR("Failed to connect to WiFi");
-        return;
-    }
-
-    LOG_INF("WiFi connected!");
-
-    // Main loop
+    // Main Loop
     while (1) {
         apply_led_settings();
         k_sleep(K_MSEC(20));
