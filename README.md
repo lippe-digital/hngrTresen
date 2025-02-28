@@ -1,11 +1,21 @@
-# HngrTresen
+# ESP32-C3 LED Control
 
-Simple Saphyr OS based ESP32 c3 super mini controller for 10 sk6812rgbww leds.
+This project controls an SK6812RGBWW LED strip using Zephyr OS on an ESP32-C3 Super Mini.
 
-Might include:
-- Web UI with PIN protection
-- On/Off switch, brightness control, color selection, and animation options
-- OTA updates with auto-revert
-- WebSocket support for real-time updates
-- Persistent settings (brightness & last animation saved)
-- Wifi-manager with captive portal
+## Features
+- Control LED strip via WiFi.
+- Multiple LED effects: solid color, rainbow, pulse.
+- WebSocket support for remote control.
+
+## Hardware Requirements
+- ESP32-C3 Super Mini
+- SK6812RGBWW LED strip
+
+## Build Instructions
+1. Clone the repository.
+2. Run `west build -b esp32c3_supermini`.
+3. Flash the firmware using `west flash`.
+
+## Usage
+1. Connect to the WiFi network specified in `config.h`.
+2. Use a WebSocket client to control the LEDs.
