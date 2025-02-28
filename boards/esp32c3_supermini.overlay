@@ -1,0 +1,10 @@
+/dts-v1/;
+/ {
+    leds {
+        compatible = "worldsemi,ws2812";
+        label = "WS2812";
+        chain-length = <10>; // Number of LEDs
+        spi-bus = <&spi0>;
+        data-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>; // DATA_PIN = GPIO2
+    };
+};
